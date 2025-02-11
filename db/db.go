@@ -42,3 +42,11 @@ func (s SQLStorage) InitDB() error {
 
 	return nil
 }
+
+func (s SQLStorage) CloseDB() error {
+	var err error
+	if err = s.db.Close(); err != nil {
+		return err
+	}
+	return nil
+}
