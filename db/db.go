@@ -5,11 +5,17 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+type ScoreBoardStorage interface {
+	AddScore(task string) error
+	GetScores(user_id string) ([]int, error)
+}
+
 type SQLStorage struct {
 	db *sql.DB
 }
 
-func (s SQLStorage) InitDB() error {
+// InitDB method initializes database
+func (s *SQLStorage) InitDB() error {
 	var err error
 	s.db, err = sql.Open("sqlite3", "scoreboard.db")
 	if err != nil {
@@ -29,7 +35,7 @@ func (s SQLStorage) InitDB() error {
     
     CREATE TABLE IF NOT EXISTS scoreboard (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_name TEXT NOT NULL,
+        username TEXT NOT NULL,
         score INTEGER NOT NULL DEFAULT 0,
         user_id INTEGER,
         FOREIGN KEY (user_id) REFERENCES users(id)
@@ -43,7 +49,8 @@ func (s SQLStorage) InitDB() error {
 	return nil
 }
 
-func (s SQLStorage) CloseDB() error {
+// CloseDB method closes DB storage
+func (s *SQLStorage) CloseDB() error {
 	var err error
 	if err = s.db.Close(); err != nil {
 		return err
