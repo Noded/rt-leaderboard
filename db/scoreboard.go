@@ -11,7 +11,7 @@ var tasks = map[string]int16{
 	"Study": 20,
 }
 
-// AddScore method adding score to db
+// AddScore implemented method adding score to db
 func (s *SQLStorage) AddScore(task string) error {
 	var err error
 	if task != "" {
@@ -25,6 +25,7 @@ func (s *SQLStorage) AddScore(task string) error {
 	return nil
 }
 
+// GetScores implemented method returns scores
 func (s *SQLStorage) GetScores(userId string) (*[]int, error) {
 	var err error
 	if userId == "" {

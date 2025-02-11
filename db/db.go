@@ -7,7 +7,12 @@ import (
 
 type ScoreBoardStorage interface {
 	AddScore(task string) error
-	GetScores(user_id string) ([]int, error)
+	GetScores(userId string) (*[]int, error)
+}
+
+type Users interface {
+	Register(username, password string) error
+	Login(username, password string) (int, error)
 }
 
 type SQLStorage struct {
@@ -29,7 +34,7 @@ func (s *SQLStorage) InitDB() error {
 	query := `CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL UNIQUE,
-        email TEXT UNIQUE,
+        password TEXT UNIQUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     
