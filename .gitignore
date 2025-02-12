@@ -1,2 +1,5 @@
 # DB
 *.sqlite
+
+# Session file
+.session

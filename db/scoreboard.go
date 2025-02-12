@@ -1,8 +1,8 @@
 package db
 
 import (
-	"database/sql"
-	"log"
+	"os"
+	"strconv"
 )
 
 // tasks its map of key string and value int 16
@@ -11,47 +11,36 @@ var tasks = map[string]int16{
 	"Study": 20,
 }
 
-// AddScore implemented method adding score to db
-func (s *SQLStorage) AddScore(task string) error {
+// GetScores implemented method returns scores
+func (s *SQLStorage) GetScores(userId int) (int, error) {
 	var err error
-	if task != "" {
-		var value = tasks[task]
-		_, err = s.db.Exec("INSERT INTO scoreboard(score) VALUES(?)", value)
-		if err != nil {
-			return err
-		}
+	row := s.db.QueryRow("SELECT score FROM scoreboard WHERE user_id=?", userId)
+	if row != nil {
+		return 0, err
+	}
+	var scores int
+	err = row.Scan(&scores)
+	if err != nil {
+		return 0, err
 	}
 
-	return nil
+	return scores, nil
 }
 
-// GetScores implemented method returns scores
-func (s *SQLStorage) GetScores(userId string) (*[]int, error) {
-	var err error
-	if userId == "" {
-		// Returns nothing
-		return nil, nil
-	}
-	rows, err := s.db.Query("SELECT score FROM scoreboard WHERE user_id=?", userId)
+// UpdateScore implemented method update sql table
+func (s *SQLStorage) UpdateScore(task string) error {
+	var value = tasks[task]
+
+	data, err := os.ReadFile(".session")
 	if err != nil {
-		return nil, err
+		return err
 	}
-	defer func(rows *sql.Rows) {
-		err := rows.Close()
-		if err != nil {
-
-		}
-	}(rows)
-
-	var scores []int
-	for rows.Next() {
-		var score int
-		if err := rows.Scan(&score); err != nil {
-			log.Fatal(err)
-		}
-		scores = append(scores, score)
+	userId, err := strconv.Atoi(string(data))
+	if err != nil {
+		return err
 	}
-	scoresPtr := &scores
 
-	return scoresPtr, nil
+	s.db.Exec("UPDATE scoreboard SET score=? WHERE user_id=?", value, userId)
+
+	return nil
 }

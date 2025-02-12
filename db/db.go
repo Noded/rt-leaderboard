@@ -6,8 +6,8 @@ import (
 )
 
 type ScoreBoardStorage interface {
-	AddScore(task string) error
-	GetScores(userId string) (*[]int, error)
+	GetScores(userId int) (int, error)
+	UpdateScore(task string) error
 }
 
 type Users interface {
