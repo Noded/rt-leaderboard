@@ -62,3 +62,8 @@ func (s *SQLStorage) CloseDB() error {
 	}
 	return nil
 }
+
+// NewSQLStorage Create new SQLStorage
+func NewSQLStorage() *SQLStorage {
+	return &SQLStorage{}
+}
