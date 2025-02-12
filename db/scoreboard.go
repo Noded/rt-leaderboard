@@ -1,10 +1,5 @@
 package db
 
-import (
-	"os"
-	"strconv"
-)
-
 // tasks its map of key string and value int 16
 var tasks = map[string]int16{
 	"Cook":  10,
@@ -31,11 +26,7 @@ func (s *SQLStorage) GetScores(userId int) (int, error) {
 func (s *SQLStorage) UpdateScore(task string) error {
 	var value = tasks[task]
 
-	data, err := os.ReadFile(".session")
-	if err != nil {
-		return err
-	}
-	userId, err := strconv.Atoi(string(data))
+	userId, err := GetCurrentUserID()
 	if err != nil {
 		return err
 	}
