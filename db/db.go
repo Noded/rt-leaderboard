@@ -6,7 +6,7 @@ import (
 )
 
 type ScoreBoardStorage interface {
-	GetScores(userId int) (int, error)
+	GetScores(userId int) (int, *[]int, error)
 	UpdateScore(task string) error
 }
 
@@ -22,7 +22,7 @@ type SQLStorage struct {
 // InitDB method initializes database
 func (s *SQLStorage) InitDB() error {
 	var err error
-	s.db, err = sql.Open("sqlite3", "scoreboard.db")
+	s.db, err = sql.Open("sqlite3", "leaderboard.db")
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func (s *SQLStorage) InitDB() error {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     
-    CREATE TABLE IF NOT EXISTS scoreboard (
+    CREATE TABLE IF NOT EXISTS leaderboard (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL,
         score INTEGER NOT NULL DEFAULT 0,
