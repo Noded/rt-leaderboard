@@ -15,35 +15,56 @@ func (s *SQLStorage) Register(username, password string) error {
 		return fmt.Errorf("username and password have to be set")
 	}
 
-	_, err := s.db.Exec("INSERT INTO users (username, password) VALUES (?, ?)", username, password)
+	// Saving user to db
+	result, err := s.db.Exec("INSERT INTO users (username, password) VALUES (?, ?)", username, password)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to insert user: %w", err)
 	}
 
-	fmt.Println("Register successful!")
+	// Getting last insert id
+	userID, err := result.LastInsertId()
+	if err != nil {
+		return fmt.Errorf("failed to get last insert id: %w", err)
+	}
+
+	// Adding a record to the table leaderboard
+	_, err = s.db.Exec("INSERT INTO leaderboard (user_id) VALUES (?)", userID)
+	if err != nil {
+		return fmt.Errorf("failed to insert into leaderboard: %w", err)
+	}
+
+	// Saving userId into file
+	if err := os.WriteFile(sessionFile, []byte(fmt.Sprintf("%d", userID)), 0644); err != nil {
+		return fmt.Errorf("session saving err: %v", err)
+	}
+
 	return nil
 }
 
 // Login - метод для входа пользователя и сохранения userId в файл сессии
-func (s *SQLStorage) Login(username, password string) (int, error) {
+func (s *SQLStorage) Login(username, password string) error {
 	var id int
+	var userpassword string
 
-	err := s.db.QueryRow("SELECT id, password FROM users WHERE username = ?", username).Scan(&id, &password)
+	err := s.db.QueryRow("SELECT id, password FROM users WHERE username = ?", username).Scan(&id, &userpassword)
 	if err != nil {
 		log.Println("Error to find user:", err)
-		return 0, fmt.Errorf("wrong username or password")
+		return fmt.Errorf("wrong username or password")
 	}
 
-	// Сохраняем userId в файл
+	if userpassword != password {
+		return fmt.Errorf("wrong username or password")
+	}
+
+	// Saving userId into file
 	if err := os.WriteFile(sessionFile, []byte(fmt.Sprintf("%d", id)), 0644); err != nil {
-		return 0, fmt.Errorf("session saving err: %v", err)
+		return fmt.Errorf("session saving err: %v", err)
 	}
 
-	fmt.Println("Login successful!")
-	return id, nil
+	return nil
 }
 
-// GetCurrentUserID - получает userId из файла сессии
+// GetCurrentUserID Getting userId from session file
 func GetCurrentUserID() (int, error) {
 	data, err := os.ReadFile(sessionFile)
 	if err != nil {

@@ -14,8 +14,10 @@ func main() {
 	}
 	defer data.CloseDB()
 
-	handlers.HandleScoreBoard()
-	handlers.HandleTaskComplete()
+	handlers.HandleUserScoreBoard(data)
+	handlers.HandleTaskComplete(data)
+	handlers.HandleRegister(data)
+	handlers.HandleLogin(data)
 
 	// TODO: run server
 	http.ListenAndServe("localhost:8080", nil)

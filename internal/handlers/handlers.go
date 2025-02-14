@@ -1,27 +1,27 @@
 package handlers
 
 import (
-	"database/sql"
-	"fmt"
 	"net/http"
 	"rt-leaderboard/db"
 	_ "rt-leaderboard/db"
 	"strconv"
 )
 
-// HandleScoreBoard processes incoming requests for the scoreboard
-func HandleScoreBoard(storage *db.SQLStorage) {
+// HandleUserScoreBoard processes incoming requests for the scoreboard
+func HandleUserScoreBoard(storage *db.SQLStorage) {
 	http.HandleFunc("/board", func(w http.ResponseWriter, r *http.Request) {
 		userId, err := db.GetCurrentUserID()
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
+
 		userTop, userName, userScore, err := storage.GetUserRank(userId)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
+		// Write into terminal: userTop: userName -> userScore
 		if _, err := w.Write([]byte(strconv.Itoa(userTop) +
-			":" + userName + strconv.Itoa(userScore) +
+			": " + userName + " -> " + strconv.Itoa(userScore) +
 			"\n")); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
@@ -41,7 +41,7 @@ func HandleTaskComplete(storage *db.SQLStorage) {
 }
 
 // HandleRegister processes user registration
-func HandleRegister(db *sql.DB) {
+func HandleRegister(storage *db.SQLStorage) {
 	http.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
@@ -56,14 +56,29 @@ func HandleRegister(db *sql.DB) {
 			return
 		}
 
-		// Сохранение пользователя в БД
-		_, err := db.Exec("INSERT INTO users (username, password) VALUES (?, ?)", username, password)
-		if err != nil {
-			http.Error(w, "Failed to save user", http.StatusInternalServerError)
-			return
+		// Saving user to db
+		if err := storage.Register(username, password); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintln(w, "User registered successfully")
+		w.Write([]byte("Register successful\n"))
+	})
+}
+
+func HandleLogin(storage *db.SQLStorage) {
+	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		username := r.FormValue("username")
+		password := r.FormValue("password")
+		err := storage.Login(username, password)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+
+		w.Write([]byte("Login successful\n"))
 	})
 }

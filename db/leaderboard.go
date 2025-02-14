@@ -1,6 +1,9 @@
 package db
 
-import "fmt"
+import (
+	"database/sql"
+	"fmt"
+)
 
 // tasks its map of key string and value int 16
 var tasks = map[string]int{
@@ -16,27 +19,28 @@ type UserScore struct {
 }
 
 // GetUserRank retrieves user's rank, username and score
+// Returns rank starting from 1 (highest score)
 func (s *SQLStorage) GetUserRank(userId int) (int, string, int, error) {
-	// Query to get user's rank using window functions
-	userQuery := `
-        WITH RankedUsers AS (
-            SELECT 
-                u.username,
-                l.score,
-                l.user_id,
-                RANK() OVER (ORDER BY l.score DESC) as rank
-            FROM leaderboard l
-            JOIN users u ON l.user_id = u.id
-        )
-        SELECT rank, username, score 
-        FROM RankedUsers 
-        WHERE user_id = ?`
+	// Single query to get rank and user data
+	rankQuery := `
+        SELECT 
+            (SELECT COUNT(*) + 1 
+             FROM leaderboard l2 
+             WHERE l2.score > l1.score) as rank,
+            u.username,
+            l1.score
+        FROM leaderboard l1
+        JOIN users u ON l1.user_id = u.id
+        WHERE l1.user_id = ?`
 
 	var userRank int
 	var username string
 	var userScore int
 
-	err := s.db.QueryRow(userQuery, userId).Scan(&userRank, &username, &userScore)
+	err := s.db.QueryRow(rankQuery, userId).Scan(&userRank, &username, &userScore)
+	if err == sql.ErrNoRows {
+		return 0, "", 0, fmt.Errorf("user with id %d not found", userId)
+	}
 	if err != nil {
 		return 0, "", 0, fmt.Errorf("failed to get user rank: %w", err)
 	}
@@ -84,9 +88,11 @@ func (s *SQLStorage) GetTopUsers() ([]UserScore, error) {
 
 // UpdateScore implemented method update sql table
 func (s *SQLStorage) UpdateScore(task string) error {
+	if task != "Cook" && task != "Study" {
+		return fmt.Errorf("invalid task: %s", task)
+	}
 	var value = tasks[task]
 	var DBValue int
-
 	userId, err := GetCurrentUserID()
 	if err != nil {
 		return fmt.Errorf("failed to get current user id: %w", err)

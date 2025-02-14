@@ -41,7 +41,6 @@ func (s *SQLStorage) InitDB() error {
     
     CREATE TABLE IF NOT EXISTS leaderboard (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL,
         score INTEGER NOT NULL DEFAULT 0,
         user_id INTEGER,
         FOREIGN KEY (user_id) REFERENCES users(id)
