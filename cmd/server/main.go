@@ -2,16 +2,21 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"rt-leaderboard/db"
+	"rt-leaderboard/internal/handlers"
 )
 
 func main() {
-	db := db.NewSQLStorage()
-	if err := db.InitDB(); err != nil {
+	data := db.NewSQLStorage()
+	if err := data.InitDB(); err != nil {
 		log.Fatal(err)
 	}
+	defer data.CloseDB()
 
-	// TODO: Handlers
+	handlers.HandleScoreBoard()
+	handlers.HandleTaskComplete()
 
 	// TODO: run server
+	http.ListenAndServe("localhost:8080", nil)
 }

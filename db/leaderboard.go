@@ -1,5 +1,7 @@
 package db
 
+import "fmt"
+
 // tasks its map of key string and value int 16
 var tasks = map[string]int{
 	"Cook":  10,
@@ -13,15 +15,16 @@ type UserScore struct {
 	Rank     int
 }
 
-// GetUserRankAndTopScores returns user rank, username, score and top 10 users with scores
-func (s *SQLStorage) GetUserRankAndTopScores(userId int) (int, string, int, *[]UserScore, error) {
-	// Query to get user's rank, username and score using window functions
+// GetUserRank retrieves user's rank, username and score
+func (s *SQLStorage) GetUserRank(userId int) (int, string, int, error) {
+	// Query to get user's rank using window functions
 	userQuery := `
         WITH RankedUsers AS (
             SELECT 
-                username,
-                score,
-                RANK() OVER (ORDER BY score DESC) as rank
+                u.username,
+                l.score,
+                l.user_id,
+                RANK() OVER (ORDER BY l.score DESC) as rank
             FROM leaderboard l
             JOIN users u ON l.user_id = u.id
         )
@@ -35,9 +38,14 @@ func (s *SQLStorage) GetUserRankAndTopScores(userId int) (int, string, int, *[]U
 
 	err := s.db.QueryRow(userQuery, userId).Scan(&userRank, &username, &userScore)
 	if err != nil {
-		return 0, "", 0, nil, err
+		return 0, "", 0, fmt.Errorf("failed to get user rank: %w", err)
 	}
 
+	return userRank, username, userScore, nil
+}
+
+// GetTopUsers retrieves top 10 users with their scores and ranks
+func (s *SQLStorage) GetTopUsers() ([]UserScore, error) {
 	// Query to get top 10 users with ranks
 	topQuery := `
         SELECT 
@@ -51,20 +59,27 @@ func (s *SQLStorage) GetUserRankAndTopScores(userId int) (int, string, int, *[]U
 
 	rows, err := s.db.Query(topQuery)
 	if err != nil {
-		return 0, "", 0, nil, err
+		return nil, fmt.Errorf("failed to query top users: %w", err)
 	}
 	defer rows.Close()
 
+	// Pre-allocate slice with capacity of 10
 	topScores := make([]UserScore, 0, 10)
+
 	for rows.Next() {
 		var us UserScore
 		if err := rows.Scan(&us.Username, &us.Score, &us.Rank); err != nil {
-			return 0, "", 0, nil, err
+			return nil, fmt.Errorf("failed to scan user score: %w", err)
 		}
 		topScores = append(topScores, us)
 	}
 
-	return userRank, username, userScore, &topScores, nil
+	// Check for errors from iterating over rows
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over rows: %w", err)
+	}
+
+	return topScores, nil
 }
 
 // UpdateScore implemented method update sql table
@@ -74,7 +89,7 @@ func (s *SQLStorage) UpdateScore(task string) error {
 
 	userId, err := GetCurrentUserID()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get current user id: %w", err)
 	}
 	s.db.QueryRow("SELECT score FROM leaderboard WHERE user_id=?", userId).Scan(&DBValue)
 

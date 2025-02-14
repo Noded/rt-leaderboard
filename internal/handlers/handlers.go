@@ -2,23 +2,40 @@ package handlers
 
 import (
 	"net/http"
+	"rt-leaderboard/db"
 	_ "rt-leaderboard/db"
-	lb "rt-leaderboard/internal/leaderboard"
 	"strconv"
 )
 
-// HandleScoreBoard
+var storage = db.NewSQLStorage()
+
+// HandleScoreBoard processes incoming requests for the scoreboard
 func HandleScoreBoard() {
 	http.HandleFunc("/board", func(w http.ResponseWriter, r *http.Request) {
-		userScore, topUsers, err := lb.ShowBoard()
+		userId, err := db.GetCurrentUserID()
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
-		for i, user := range *topUsers {
-			w.Write([]byte(strconv.Itoa(i)))
-			w.Write([]byte(" " + user))
+		userTop, userName, userScore, err := storage.GetUserRank(userId)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
 		}
-		w.Write([]byte("\n"))
-		w.Write([]byte("User: " + userScore + "\n"))
+		if _, err := w.Write([]byte(strconv.Itoa(userTop) +
+			":" + userName + strconv.Itoa(userScore) +
+			"\n")); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+	})
+}
+
+// HandleTaskComplete handle completed user task
+// And update score
+func HandleTaskComplete() {
+	http.HandleFunc("/complete", func(w http.ResponseWriter, r *http.Request) {
+		task := r.URL.Query().Get("task")
+		err := storage.UpdateScore(task)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 	})
 }

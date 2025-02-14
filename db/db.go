@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -24,11 +25,11 @@ func (s *SQLStorage) InitDB() error {
 	var err error
 	s.db, err = sql.Open("sqlite3", "leaderboard.db")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed open db: %w", err)
 	}
 
 	if err := s.db.Ping(); err != nil {
-		return err
+		return fmt.Errorf("failed ping to db: %w", err)
 	}
 
 	query := `CREATE TABLE IF NOT EXISTS users (
@@ -48,7 +49,7 @@ func (s *SQLStorage) InitDB() error {
 
 	_, err = s.db.Exec(query)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to exec query: %w", err)
 	}
 
 	return nil
@@ -58,7 +59,7 @@ func (s *SQLStorage) InitDB() error {
 func (s *SQLStorage) CloseDB() error {
 	var err error
 	if err = s.db.Close(); err != nil {
-		return err
+		return fmt.Errorf("failed to close db: %w", err)
 	}
 	return nil
 }
