@@ -8,6 +8,8 @@ import (
 )
 
 // HandleUserScoreBoard processes incoming requests for the scoreboard
+//
+// Example: curl curl "localhost:8080/board"
 func HandleUserScoreBoard(storage *db.SQLStorage) {
 	http.HandleFunc("/board", func(w http.ResponseWriter, r *http.Request) {
 		userId, err := db.GetCurrentUserID()
@@ -28,6 +30,9 @@ func HandleUserScoreBoard(storage *db.SQLStorage) {
 	})
 }
 
+// HandleTopUsers processes top 10 users ordered by score
+//
+// Example: curl "localhost:8080/top"
 func HandleTopUsers(storage *db.SQLStorage) {
 	http.HandleFunc("/top", func(w http.ResponseWriter, r *http.Request) {
 		topUsers, err := storage.GetTopUsers()
@@ -44,6 +49,8 @@ func HandleTopUsers(storage *db.SQLStorage) {
 
 // HandleTaskComplete process completed user task
 // And update score
+//
+// Example: curl "localhost:8080/complete?url=task=SomeTask"
 func HandleTaskComplete(storage *db.SQLStorage) {
 	http.HandleFunc("/complete", func(w http.ResponseWriter, r *http.Request) {
 		task := r.URL.Query().Get("task")
@@ -55,6 +62,8 @@ func HandleTaskComplete(storage *db.SQLStorage) {
 }
 
 // HandleRegister processes user registration
+//
+// Example: curl -X POST -d "username=yourUserName&password=yourPassword" localhost:8080/register
 func HandleRegister(storage *db.SQLStorage) {
 	http.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -80,6 +89,9 @@ func HandleRegister(storage *db.SQLStorage) {
 	})
 }
 
+// HandleLogin processes user login
+//
+// Example: curl -X POST -d "username=yourUserName&password=yourPassword" localhost:8080/login
 func HandleLogin(storage *db.SQLStorage) {
 	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -89,10 +101,11 @@ func HandleLogin(storage *db.SQLStorage) {
 		username := r.FormValue("username")
 		password := r.FormValue("password")
 		err := storage.Login(username, password)
+		if err == nil {
+			w.Write([]byte("Login successful\n"))
+		}
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
-
-		w.Write([]byte("Login successful\n"))
 	})
 }

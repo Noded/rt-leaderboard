@@ -20,6 +20,6 @@ func main() {
 	handlers.HandleRegister(data)
 	handlers.HandleLogin(data)
 
-	// TODO: run server
+	// TODO: make real time display with websockets
 	http.ListenAndServe("localhost:8080", nil)
 }
