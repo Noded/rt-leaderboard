@@ -15,6 +15,7 @@ func main() {
 	defer data.CloseDB()
 
 	handlers.HandleUserScoreBoard(data)
+	handlers.HandleTopUsers(data)
 	handlers.HandleTaskComplete(data)
 	handlers.HandleRegister(data)
 	handlers.HandleLogin(data)

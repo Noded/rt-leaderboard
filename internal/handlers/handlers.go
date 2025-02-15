@@ -28,6 +28,20 @@ func HandleUserScoreBoard(storage *db.SQLStorage) {
 	})
 }
 
+func HandleTopUsers(storage *db.SQLStorage) {
+	http.HandleFunc("/top", func(w http.ResponseWriter, r *http.Request) {
+		topUsers, err := storage.GetTopUsers()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		for _, user := range topUsers {
+			// UserRank: UserName - UserScore
+			// 1: SomeName - 50
+			w.Write([]byte(strconv.Itoa(user.Rank) + ": " + user.Username + " - " + strconv.Itoa(user.Score) + "\n"))
+		}
+	})
+}
+
 // HandleTaskComplete process completed user task
 // And update score
 func HandleTaskComplete(storage *db.SQLStorage) {
