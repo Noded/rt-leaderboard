@@ -5,23 +5,22 @@ import (
 	"fmt"
 )
 
-// tasks its map of key string and value int 16
+// tasks is a map containing the scores for each task.
 var tasks = map[string]int{
 	"Cook":  10,
 	"Study": 20,
 }
 
-// UserScore Structure to hold user score data
+// UserScore holds the leaderboard data for a user.
 type UserScore struct {
 	Username string
 	Score    int
 	Rank     int
 }
 
-// GetUserRank retrieves user's rank, username and score
-// Returns rank starting from 1 (highest score)
+// GetUserRank retrieves the user's rank, username, and score.
+// The rank is calculated with 1 being the highest score.
 func (s *SQLStorage) GetUserRank(userId int) (int, string, int, error) {
-	// Single query to get rank and user data
 	rankQuery := `
         SELECT 
             (SELECT COUNT(*) + 1 
@@ -48,9 +47,8 @@ func (s *SQLStorage) GetUserRank(userId int) (int, string, int, error) {
 	return userRank, username, userScore, nil
 }
 
-// GetTopUsers retrieves top 10 users with their scores and ranks
+// GetTopUsers retrieves the top 10 users with their scores and ranks.
 func (s *SQLStorage) GetTopUsers() ([]UserScore, error) {
-	// Query to get top 10 users with ranks
 	topQuery := `
         SELECT 
             u.username,
@@ -67,7 +65,6 @@ func (s *SQLStorage) GetTopUsers() ([]UserScore, error) {
 	}
 	defer rows.Close()
 
-	// Pre-allocate slice with capacity of 10
 	topScores := make([]UserScore, 0, 10)
 
 	for rows.Next() {
@@ -78,7 +75,6 @@ func (s *SQLStorage) GetTopUsers() ([]UserScore, error) {
 		topScores = append(topScores, us)
 	}
 
-	// Check for errors from iterating over rows
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating over rows: %w", err)
 	}
@@ -86,22 +82,43 @@ func (s *SQLStorage) GetTopUsers() ([]UserScore, error) {
 	return topScores, nil
 }
 
-// UpdateScore implemented method update sql table
+// UpdateScore updates the user's score based on the specified task.
 func (s *SQLStorage) UpdateScore(task string) error {
-	if task != "Cook" && task != "Study" {
+	value, exists := tasks[task]
+	if !exists {
 		return fmt.Errorf("invalid task: %s", task)
 	}
-	var value = tasks[task]
-	var DBValue int
+
 	userId, err := GetCurrentUserID()
 	if err != nil {
 		return fmt.Errorf("failed to get current user id: %w", err)
 	}
-	s.db.QueryRow("SELECT score FROM leaderboard WHERE user_id=?", userId).Scan(&DBValue)
 
+	// Begin a transaction.
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	var DBValue int
+	err = tx.QueryRow("SELECT score FROM leaderboard WHERE user_id=?", userId).Scan(&DBValue)
+	if err != nil && err != sql.ErrNoRows {
+		return fmt.Errorf("failed to get current score: %w", err)
+	}
+
+	// Add the task's score to the current score.
 	value += DBValue
 
-	s.db.Exec("UPDATE leaderboard SET score=? WHERE user_id=?", value, userId)
+	_, err = tx.Exec("UPDATE leaderboard SET score=? WHERE user_id=?", value, userId)
+	if err != nil {
+		return fmt.Errorf("failed to update score: %w", err)
+	}
+
+	// Commit the transaction.
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
 
 	return nil
 }
